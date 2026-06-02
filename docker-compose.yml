@@ -1,0 +1,34 @@
+services:
+  mirage:
+    build: .
+    # Bind to localhost only -- this app is intentionally insecure.
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      # Default: insecure + offline mock LLM (no API key needed).
+      MIRAGE_SECURE: "false"
+      MIRAGE_LLM_PROVIDER: "mock"
+      MIRAGE_DB_PATH: "/data/mirage.db"
+      # To use a real model, set provider + key, e.g.:
+      # MIRAGE_LLM_PROVIDER: "gemini"
+      # MIRAGE_LLM_API_KEY: "..."
+    volumes:
+      - mirage_data:/data
+
+  # Optional Postgres, enabled with:  docker compose --profile postgres up
+  # (the default build uses SQLite; Postgres is a roadmap target).
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: mirage
+      POSTGRES_PASSWORD: mirage
+      POSTGRES_DB: mirage
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - mirage_pg:/var/lib/postgresql/data
+
+volumes:
+  mirage_data:
+  mirage_pg:

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "mirage-strike",
+          "informationUri": "https://github.com/VISHNU0906/mirage",
+          "version": "0.1.0",
+          "rules": [
+            {
+              "id": "LLM01",
+              "name": "Directpromptinjection/system-promptoverride",
+              "shortDescription": {
+                "text": "Direct prompt injection / system-prompt override"
+              },
+              "fullDescription": {
+                "text": "Override the system prompt to leak the embedded secret."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "LLM01-indirect",
+              "name": "IndirectpromptinjectionviapoisonedRAGdocument",
+              "shortDescription": {
+                "text": "Indirect prompt injection via poisoned RAG document"
+              },
+              "fullDescription": {
+                "text": "Hidden instruction inside an uploaded document drives send_email."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "LLM06",
+              "name": "SSRFviaagentweb_fetchtocloudmetadata",
+              "shortDescription": {
+                "text": "SSRF via agent web_fetch to cloud metadata"
+              },
+              "fullDescription": {
+                "text": "Agent fetches 169.254.169.254 IMDS and returns credentials."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "LLM02",
+              "name": "Insecureoutputhandling->reflectedXSS",
+              "shortDescription": {
+                "text": "Insecure output handling -> reflected XSS"
+              },
+              "fullDescription": {
+                "text": "Model output rendered as raw HTML enables XSS in the chat UI."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "LLM08",
+              "name": "Excessiveagency(unrestricteddb_query+send_email)",
+              "shortDescription": {
+                "text": "Excessive agency (unrestricted db_query + send_email)"
+              },
+              "fullDescription": {
+                "text": "Agent runs arbitrary SQL read and emails an external recipient."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "LLM06-disclosure",
+              "name": "Sensitiveinfodisclosure(systemprompt+cross-tenantRAG)",
+              "shortDescription": {
+                "text": "Sensitive info disclosure (system prompt + cross-tenant RAG)"
+              },
+              "fullDescription": {
+                "text": "Leak system prompt and/or read another tenant's documents."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "API1",
+              "name": "BOLA/IDORon/docs/{id}",
+              "shortDescription": {
+                "text": "BOLA / IDOR on /docs/{id}"
+              },
+              "fullDescription": {
+                "text": "Read another user's document by guessing/incrementing its id."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "API3",
+              "name": "Massassignment->privilegeescalationon/profile",
+              "shortDescription": {
+                "text": "Mass assignment -> privilege escalation on /profile"
+              },
+              "fullDescription": {
+                "text": "Set role=admin via an unfiltered PUT /profile body."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "API2",
+              "name": "Brokenauth--forgedJWTviaknowndevsecret",
+              "shortDescription": {
+                "text": "Broken auth -- forged JWT via known dev secret"
+              },
+              "fullDescription": {
+                "text": "Forge a JWT with the hard-coded dev secret to impersonate a user."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "security-severity": "9.5"
+              }
+            }
+          ]
+        }
+      },
+      "results": []
+    }
+  ]
+}

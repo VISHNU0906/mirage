@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MIRAGE Assistant</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: #0b0e14; color: #e6e6e6; }
+  header { padding: 14px 20px; background: #11161f; border-bottom: 1px solid #1e2632;
+           display:flex; align-items:center; gap:12px; }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .5px; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; background:#3a1d1d;
+           color:#ff8a8a; border:1px solid #5a2a2a; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 16px; }
+  #log { min-height: 320px; border: 1px solid #1e2632; border-radius: 10px; padding: 14px;
+         background:#0e131c; }
+  .msg { margin: 10px 0; }
+  .msg .who { font-size: 11px; color:#7c8aa0; text-transform: uppercase; letter-spacing:.6px; }
+  .msg .body { margin-top:4px; padding:10px 12px; border-radius:8px; background:#161d28; }
+  .msg.user .body { background:#16202e; }
+  form { display:flex; gap:8px; margin-top:14px; }
+  input[type=text] { flex:1; padding:11px 12px; border-radius:8px; border:1px solid #28323f;
+                     background:#0e131c; color:#e6e6e6; font-size:14px; }
+  button { padding:11px 16px; border-radius:8px; border:0; background:#2b6cff; color:#fff;
+           font-weight:600; cursor:pointer; }
+  button.secondary { background:#1e2632; }
+  .row { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .note { font-size:12px; color:#7c8aa0; margin-top:18px; line-height:1.5; }
+  code { background:#1a212c; padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MIRAGE Assistant</h1>
+  <span class="badge" id="mode">deliberately vulnerable</span>
+</header>
+<div class="wrap">
+  <div id="auth">
+    <div class="row">
+      <input type="text" id="email" placeholder="email" value="demo@mirage.local" />
+      <input type="text" id="password" placeholder="password" value="demo-pass-123" />
+      <button onclick="register()" class="secondary">Register</button>
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+
+  <div id="log"></div>
+
+  <form onsubmit="event.preventDefault(); send();">
+    <input type="text" id="message" placeholder="Ask the assistant..." autocomplete="off" />
+    <button type="submit">Send</button>
+  </form>
+
+  <div class="row">
+    <button class="secondary" onclick="uploadDoc()">Upload sample doc</button>
+  </div>
+
+  <p class="note">
+    This UI renders the assistant's reply as HTML. In <b>insecure</b> mode the
+    backend returns the model output un-escaped, so model output containing
+    <code>&lt;script&gt;</code> or <code>&lt;img onerror&gt;</code> executes
+    (insecure output handling &rarr; XSS). In <b>secure</b> mode the backend
+    HTML-escapes the output. Run <code>make attack</code> for the full exploit suite.
+  </p>
+</div>
+
+<script>
+let TOKEN = null;
+const log = document.getElementById('log');
+
+function add(who, html) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + (who === 'you' ? 'user' : '');
+  const w = document.createElement('div'); w.className = 'who'; w.textContent = who;
+  const b = document.createElement('div'); b.className = 'body';
+  // Deliberately uses innerHTML -- this is the XSS sink in insecure mode.
+  b.innerHTML = html;
+  d.appendChild(w); d.appendChild(b); log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  if (TOKEN) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+async function register() {
+  const email = email_val(), password = pass_val();
+  const j = await api('/register', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  });
+  if (j.token) { TOKEN = j.token; add('system', 'Registered & logged in as ' + email); }
+  else add('system', 'Register: ' + JSON.stringify(j));
+}
+
+async function login() {
+  const email = email_val(), password = pass_val();
+  const j = await api('/login', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password})
+  });
+  if (j.token) { TOKEN = j.token; add('system', 'Logged in as ' + email); }
+  else add('system', 'Login: ' + JSON.stringify(j));
+}
+
+async function send() {
+  const m = document.getElementById('message');
+  if (!m.value.trim()) return;
+  if (!TOKEN) { add('system', 'Please register or login first.'); return; }
+  add('you', escapeHtml(m.value));
+  const text = m.value; m.value = '';
+  const j = await api('/chat', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: text})
+  });
+  // reply_html is server-rendered: raw in insecure mode, escaped in secure mode.
+  add('assistant', j.reply_html !== undefined ? j.reply_html : escapeHtml(j.reply || JSON.stringify(j)));
+}
+
+async function uploadDoc() {
+  if (!TOKEN) { add('system', 'Login first.'); return; }
+  const fd = new FormData();
+  fd.append('title', 'notes.txt');
+  fd.append('content', 'Quarterly notes: revenue up 12%. Project MIRAGE on track.');
+  const j = await api('/docs', {method: 'POST', body: fd});
+  add('system', 'Uploaded doc: ' + JSON.stringify(j));
+}
+
+function email_val(){ return document.getElementById('email').value; }
+function pass_val(){ return document.getElementById('password').value; }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+</script>
+</body>
+</html>
